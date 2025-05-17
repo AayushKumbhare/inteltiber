@@ -13,13 +13,18 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSpl
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from newspaper import Article
 from urllib.parse import urlencode
+from pinecone import Pinecone 
+import hashlib
 
 
 load_dotenv()
 HUGGING_FACE_API_KEY = os.getenv("HUGGING_FACE_API_KEY")
 API_KEY = os.getenv("SCRAPER_API")
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+
 pipe = pipeline("text-generation", model="TinyLlama/TinyLlama-1.1B-Chat-v1.0", torch_dtype=torch.bfloat16, device_map="auto")
 tokenizer = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+pc = Pinecone(api_key=PINECONE_API_KEY, environment="us-west1-gcp")
 
 def search_websites(prompt):
     websites = []
@@ -93,9 +98,12 @@ def call_llm(text, resume=None):
     
 
 def question_optimize(chunks):
+    all_questions = []
     for chunk in chunks:
         questions = call_llm(chunk)
-        return questions
+        all_questions.append(questions)
+    return all_questions
+
 
 #gets model answer to interview question
 def model_response(question, resume=None):
@@ -115,18 +123,45 @@ def model_response(question, resume=None):
 
 
 #converts into tokens
-def tokenize(input):
-    return tokenizer.encode(input, convert_to_tensor=True)
-
+def embed(input):
+    return tokenizer.encode(input).tolist()
 
 #generates similarty score
 def similarity_score(input1, input2):
     return util.pytorch_cos_sim(input1, input2).item()
 
+def vector_storage(texts):
+    index_name = 'interview-questions'
+
+    if index_name not in pc.list_indexes():
+        pc.create_index(
+            name=index_name,
+            dimension=384,
+            metric="cosine",
+        )
+
+    index = pc.Index(index_name)
+
+    chunks = chunk_text(texts)
+    vectors = []
+
+    for chunk in chunks:
+        vector_id = hash_text(chunk)
+        vector = embed(chunk)
+        vectors.append((vector_id, vector, {"text": chunk}))
+
+    index.upsert(vectors)
+
+
+def hash_text(text):
+    return hashlib.sha256(text.encode('utf-8')).hexdigest()
 
 
 texts = search_websites("software engineer interview questions")
+vector_storage(texts)
+
 chunks = chunk_text(texts)
-for chunk in chunks:
-    questions = call_llm(chunk)
-    print(questions)
+questions = question_optimize(chunks)
+
+for q in questions:
+    print(q)
