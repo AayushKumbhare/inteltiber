@@ -24,7 +24,7 @@ class RAGBot:
         )
         self.tokenizer.pad_token = self.tokenizer.eos_token
         self.llm.config.pad_token_id = self.llm.config.eos_token_id
-        print("✅ Model loaded.")
+        print("Model loaded.")
 
     def build_vectorstore(self, chunk_size=500, overlap=50):
         print(f"📚 Building vectorstore from {self.data_path}...")
@@ -35,7 +35,7 @@ class RAGBot:
         self.index = VectorstoreIndexCreator(
             embedding=HuggingFaceEmbeddings(), text_splitter=splitter
         ).from_loaders([loader])
-        print("✅ Vectorstore built.")
+        print("Vectorstore built.")
 
     def create_prompt(self, question, rag_enabled=True):
         results = self.index.vectorstore.similarity_search(question, k=self.top_k)
@@ -67,4 +67,4 @@ if __name__ == "__main__":
             break
         bot.create_prompt(query)
         response = bot.inference()
-        print(f"\n💬 {response}\n")
+        print(f"\n{response}\n")
