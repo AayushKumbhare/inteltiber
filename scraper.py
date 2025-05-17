@@ -13,7 +13,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSpl
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from newspaper import Article
 from urllib.parse import urlencode
-from pinecone import Pinecone 
+from pinecone import Pinecone
 import hashlib
 
 
