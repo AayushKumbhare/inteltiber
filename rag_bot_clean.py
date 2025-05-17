@@ -12,8 +12,8 @@ class RAGBot:
         self.tokenizer = None
         self.index = None
         self.full_prompt = ""
-        self.max_tokens = 100
-        self.top_k = 2
+        self.max_tokens = 512  # increased to support longer output
+        self.top_k = 3
         self.data_path = data_path
 
     def load_model(self):
@@ -24,7 +24,7 @@ class RAGBot:
         )
         self.tokenizer.pad_token = self.tokenizer.eos_token
         self.llm.config.pad_token_id = self.llm.config.eos_token_id
-        print("Model loaded.")
+        print("✅ Model loaded.")
 
     def build_vectorstore(self, chunk_size=500, overlap=50):
         print(f"📚 Building vectorstore from {self.data_path}...")
@@ -35,19 +35,23 @@ class RAGBot:
         self.index = VectorstoreIndexCreator(
             embedding=HuggingFaceEmbeddings(), text_splitter=splitter
         ).from_loaders([loader])
-        print("Vectorstore built.")
+        print("✅ Vectorstore built.")
 
-    def create_prompt(self, question, rag_enabled=True):
-        results = self.index.vectorstore.similarity_search(question, k=self.top_k)
+    def create_prompt(self, rag_enabled=True):
+        task = (
+            "Generate 5 behavioral interview questions based on this material. "
+            "For each question, also provide a detailed sample answer."
+        )
+        results = self.index.vectorstore.similarity_search(task, k=self.top_k)
         context = "\n".join([doc.page_content for doc in results])
         if rag_enabled:
-            self.full_prompt = f"Context: {context}\n\nQuestion: {question}\nAnswer:"
+            self.full_prompt = f"Context: {context}\n\nTask: {task}\nOutput:"
         else:
-            self.full_prompt = f"Question: {question}\nAnswer:"
+            self.full_prompt = f"Task: {task}\nOutput:"
 
     def inference(self):
         messages = [
-            {"role": "system", "content": "You are a helpful assistant. Use the provided context to answer questions accurately."},
+            {"role": "system", "content": "You are an AI that creates behavioral interview Q&A pairs based on context of the database."},
             {"role": "user", "content": self.full_prompt}
         ]
         text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
@@ -60,11 +64,8 @@ if __name__ == "__main__":
     bot = RAGBot(data_path="my_data.txt")
     bot.load_model()
     bot.build_vectorstore()
+    bot.create_prompt()
+    result = bot.inference()
 
-    while True:
-        query = input("\nAsk a question (or type 'exit'): ")
-        if query.lower() == "exit":
-            break
-        bot.create_prompt(query)
-        response = bot.inference()
-        print(f"\n{response}\n")
+    print("\n🧠 Interview Questions + Sample Answers:\n")
+    print(result)
