@@ -1,4 +1,6 @@
+
 import os
+import ast
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from langchain.document_loaders import TextLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -12,12 +14,12 @@ class RAGBot:
         self.tokenizer = None
         self.index = None
         self.full_prompt = ""
-        self.max_tokens = 512  # increased to support longer output
+        self.max_tokens = 1024
         self.top_k = 3
         self.data_path = data_path
 
     def load_model(self):
-        print("🚀 Loading model...")
+        print("Loading model...")
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         self.llm = AutoModelForCausalLM.from_pretrained(
             self.model_name, torch_dtype="auto", device_map="auto"
@@ -35,12 +37,14 @@ class RAGBot:
         self.index = VectorstoreIndexCreator(
             embedding=HuggingFaceEmbeddings(), text_splitter=splitter
         ).from_loaders([loader])
-        print("Vectorstore built.")
+        print(" Vectorstore built.")
 
     def create_prompt(self, rag_enabled=True):
         task = (
-            "Generate 5 behavioral interview questions based on this material. "
-            "For each question, also provide a detailed sample answer."
+            "Generate 5 technical interview questions based on this material. "
+            "For each question, also provide a detailed sample answer. "
+            "Format the output as a Python dictionary, where each key is a question "
+            "and the corresponding value is its answer."
         )
         results = self.index.vectorstore.similarity_search(task, k=self.top_k)
         context = "\n".join([doc.page_content for doc in results])
@@ -51,7 +55,7 @@ class RAGBot:
 
     def inference(self):
         messages = [
-            {"role": "system", "content": "You are an AI that creates behavioral interview Q&A pairs based on context of the database."},
+            {"role": "system", "content": "You are an AI that creates interview Q&A pairs in dictionary format."},
             {"role": "user", "content": self.full_prompt}
         ]
         text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
@@ -66,4 +70,12 @@ if __name__ == "__main__":
     bot.build_vectorstore()
     bot.create_prompt()
     result = bot.inference()
-    print(result)
+
+    print("\n Interview Questions + Answers:\n")
+    try:
+        parsed = ast.literal_eval(result)
+        for q, a in parsed.items():
+            print(f" {q}\n {a}\n")
+    except Exception as e:
+        print(" Could not parse as dictionary. Raw output below:\n")
+        print(result)
