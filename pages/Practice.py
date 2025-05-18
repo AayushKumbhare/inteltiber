@@ -100,45 +100,33 @@ with st.container():
     with st.expander("Click to show"):
         st.write(card["answer"])
 
-# === Realtime WebSocket Audio Streaming ===
-st.markdown("### Live Audio Recording (WebSocket Streamed)")
 
-class WebSocketAudioStreamer(AudioProcessorBase):
-    def __init__(self) -> None:
-        self.ws_url = "http://172.31.22.1:8501"  
-        self.connected = False
-        self.loop = asyncio.new_event_loop()
-        self.thread = threading.Thread(target=self._start_loop, daemon=True)
-        self.thread.start()
+# === Upload Audio and Feedback JSON ===
+st.markdown("### Upload Your Recorded Answer and Feedback")
 
-    def _start_loop(self):
-        asyncio.set_event_loop(self.loop)
-        self.loop.run_until_complete(self._connect())
+uploaded_audio = st.file_uploader("Upload your `.wav` or `.mp3` audio file", type=["wav", "mp3"])
+uploaded_json = st.file_uploader("Upload feedback `.json` file", type=["json"])
 
-    async def _connect(self):
+if uploaded_audio:
+    st.audio(uploaded_audio, format="audio/wav")
+
+if uploaded_audio and uploaded_json:
+    if st.button("Submit and Show Feedback"):
         try:
-            self.websocket = await websockets.connect(self.ws_url)
-            self.connected = True
+            import json
+
+            feedback_data = json.load(uploaded_json)
+
+            st.success("✅ Feedback loaded!")
+
+            st.markdown("### Transcript")
+            st.markdown(feedback_data.get("transcript", "_No transcript in file._"))
+
+            st.markdown("### Filler Word Analysis")
+            st.json(feedback_data.get("analysis", {}))
+
+            st.markdown("### Words Per Minute (WPM)")
+            st.write(feedback_data.get("wpm", "N/A"))
+
         except Exception as e:
-            print(f"[WebSocket Error] {e}")
-
-    def recv(self, frame: av.AudioFrame) -> av.AudioFrame:
-        if self.connected:
-            try:
-                pcm_bytes = frame.to_ndarray().flatten().tobytes()
-                asyncio.run_coroutine_threadsafe(self.websocket.send(pcm_bytes), self.loop)
-            except Exception as e:
-                print(f"[WebSocket Send Error] {e}")
-        return frame
-
-ctx = webrtc_streamer(
-    key="audio_streamer",
-    mode=WebRtcMode.SENDONLY,
-    audio_processor_factory=WebSocketAudioStreamer,
-    media_stream_constraints={"audio": True, "video": False},
-)
-
-if ctx.state.playing:
-    st.success("Streaming live audio to backend...")
-else:
-    st.info("Click 'Start' above to begin recording.")
+            st.error(f"Failed to parse feedback: {e}")
