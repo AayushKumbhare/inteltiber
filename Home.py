@@ -30,7 +30,7 @@ if st.button("Start Practice", key="start_practice_button"):
     if role == "Select a role...":
         st.warning("Please select a valid role before proceeding.")
     else:
-        st.success("✅ Your setup has been saved!")
+        st.success("Setup saved!")
 
         # Save info to query params (optional for debugging)
         st.query_params.update({

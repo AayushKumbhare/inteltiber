@@ -2,8 +2,6 @@ import streamlit as st
 import json
 import os
 
-
-
 st.set_page_config(page_title="Flashcard Practice", layout="wide")
 
 st.title("Flashcard Practice")
@@ -25,17 +23,17 @@ st.markdown("<div style='margin-top: 30px'></div>", unsafe_allow_html=True)
 
 
 # === Load flashcards from local JSON file (with full question text as keys) ===
-if os.path.exists("interview_qna.json"):
-    with open("interview_qna.json", "r") as f:
-        raw_flashcards = json.load(f)
+if os.path.exists("interview_combined_20250517_190401.json"):
+    with open("interview_combined_20250517_190401.json", "r") as f:
+        raw_data = json.load(f)
 
-    # Convert to list of dicts
+    # Convert to flashcard format using 'question' and 'ai_answer'
     flashcards = [
-        {"question": q, "answer": a}
-        for q, a in raw_flashcards.items()
+        {"question": item["question"], "answer": item["ai_answer"], "feedback": item["feedback"]}
+        for item in raw_data
     ]
 else:
-    flashcards = [{"question": "No flashcards loaded.", "answer": ""}]
+    flashcards = [{"question": "No flashcards loaded.", "answer": "", "feedback": ""}]
 
 # === Initialize session state for card navigation ===
 if "card_index" not in st.session_state:
@@ -110,31 +108,45 @@ st.markdown("### Upload Your Recorded Answer")
 
 uploaded_audio = st.file_uploader("Upload your `.wav` or `.mp3` audio file", type=["wav", "mp3"])
 
+if uploaded_audio is not None:
+    st.audio(uploaded_audio, format="audio/wav")
+    local_audio_path = os.path.join("tmp", uploaded_audio.name)
+    os.makedirs("tmp", exist_ok=True)
+    with open(local_audio_path, "wb") as f:
+        f.write(uploaded_audio.read())
+    st.session_state["uploaded_audio_path"] = local_audio_path
+
+    if st.button("Transcribe and Show Feedback"):
+        from transcript import run_transcription
+        run_transcription(local_audio_path)
+audio_name = uploaded_audio.name
+
 if uploaded_audio:
     st.audio(uploaded_audio, format="audio/wav")
 
     if st.button("Submit and Show Feedback"):
         try:
             import json
-            import os
 
-            # Load from local feedback file
-            if os.path.exists("feedback.json"):
-                with open("feedback.json", "r") as f:
-                    feedback_data = json.load(f)
+            # Load local feedback file
+            if os.path.exists("interview_combined_20250517_190401.json"):
+                with open("interview_combined_20250517_190401.json", "r") as f:
+                    feedback_list = json.load(f)
 
-                st.success("Feedback loaded")
+                current_question = card["question"]
 
-                st.markdown("### Transcript")
-                st.markdown(feedback_data.get("transcript", "_No transcript in file._"))
+                # Find feedback matching current question
+                match = next((entry for entry in feedback_list if entry["question"] == current_question), None)
 
-                st.markdown("### Filler Word Analysis")
-                st.json(feedback_data.get("analysis", {}))
+                if match:
+                    st.success("Feedback loaded")
 
-                st.markdown("### Words Per Minute (WPM)")
-                st.write(feedback_data.get("wpm", "N/A"))
+                    st.markdown("### Feedback")
+                    st.warning(match.get("feedback", "No feedback found."))
+                else:
+                    st.error("No matching feedback found for this question.")
             else:
-                st.error("Local feedback.json file not found.")
+                st.error("file not found.")
 
         except Exception as e:
-            st.error(f"Failed to parse feedback: {e}")
+            st.error(f"Failed to load or parse feedback: {e}")
