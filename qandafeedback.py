@@ -19,8 +19,7 @@ class feedback:
             "feedback": feedback
         })
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    combined_path = f"interview_combined_{timestamp}.json"
+    combined_path = f"interview_combined_.json"
     with open(combined_path, "w") as f:
         json.dump(combined_data, f, indent=4)
 
