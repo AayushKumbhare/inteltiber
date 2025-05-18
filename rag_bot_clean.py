@@ -8,6 +8,8 @@ from langchain.indexes import VectorstoreIndexCreator
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from dotenv import load_dotenv 
+from transformers import AutoTokenizer  # Add this
+
 
 # Set tokenizer parallelism to false to avoid warnings
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -101,7 +103,51 @@ class RAGBot:
             print(f"Error in generate_qa: {str(e)}")
             return {}
 
-def run():
+    def evaluate_user_response(self, question, user_answer):
+        try:
+            # Format prompt as chat messages
+            messages = [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are an expert technical interviewer. Compare the candidate's response "
+                        "to the correct answer and provide constructive, concise feedback."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Question: {question}\n\n"
+                        f"Correct Answer: {qa_pairs.get(question, 'N/A')}\n\n"
+                        f"Candidate Answer: {user_answer}\n\n"
+                        "Please give clear, actionable feedback on how well the answer matches the correct answer, "
+                        "mentioning what was done well and what could be improved."
+                    )
+                }
+            ]
+
+            # Call OpenAI API to evaluate
+            response = self.client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=messages,
+                temperature=0.5,
+                max_tokens=300
+            )
+
+            feedback = response.choices[0].message.content.strip()
+            return feedback
+
+        except Exception as e:
+            return f"Error evaluating response: {str(e)}"
+
+
+# Initialize global objects so they can be imported
+bot = RAGBot(data_path="raw_model_output.txt")
+bot.build_vectorstore()
+qa_pairs = bot.generate_qa()
+combined_data = []
+
+if __name__ == "__main__":
     try:
         # Initialize and run RAG bot
         bot = RAGBot(data_path="raw_model_output.txt")
@@ -126,6 +172,3 @@ def run():
             print("No Q&A pairs were generated.")
     except Exception as e:
         print(f"Error in main execution: {str(e)}")
-
-if __name__ == "__main__":
-    run()
