@@ -12,8 +12,11 @@ st.title("Flashcard Practice")
 # Display user context
 name = st.session_state.get("name", "Anonymous")
 role = st.session_state.get("role", "Not specified")
-st.markdown(f"Practicing as **{name}**, for **{role}**")
-st.markdown("---")
+query = st.query_params
+name = query.get("name", "Anonymous")
+role = query.get("role", "Not specified")
+
+
 
 # Flashcard content
 flashcards = [
