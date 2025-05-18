@@ -101,32 +101,36 @@ with st.container():
         st.write(card["answer"])
 
 
-# === Upload Audio and Feedback JSON ===
-st.markdown("### Upload Your Recorded Answer and Feedback")
+# === Upload Audio and Load Local Feedback JSON ===
+st.markdown("### Upload Your Recorded Answer")
 
 uploaded_audio = st.file_uploader("Upload your `.wav` or `.mp3` audio file", type=["wav", "mp3"])
-uploaded_json = st.file_uploader("Upload feedback `.json` file", type=["json"])
 
 if uploaded_audio:
     st.audio(uploaded_audio, format="audio/wav")
 
-if uploaded_audio and uploaded_json:
     if st.button("Submit and Show Feedback"):
         try:
             import json
+            import os
 
-            feedback_data = json.load(uploaded_json)
+            # Load from local feedback file
+            if os.path.exists("feedback.json"):
+                with open("feedback.json", "r") as f:
+                    feedback_data = json.load(f)
 
-            st.success("✅ Feedback loaded!")
+                st.success("Feedback loaded")
 
-            st.markdown("### Transcript")
-            st.markdown(feedback_data.get("transcript", "_No transcript in file._"))
+                st.markdown("### Transcript")
+                st.markdown(feedback_data.get("transcript", "_No transcript in file._"))
 
-            st.markdown("### Filler Word Analysis")
-            st.json(feedback_data.get("analysis", {}))
+                st.markdown("### Filler Word Analysis")
+                st.json(feedback_data.get("analysis", {}))
 
-            st.markdown("### Words Per Minute (WPM)")
-            st.write(feedback_data.get("wpm", "N/A"))
+                st.markdown("### Words Per Minute (WPM)")
+                st.write(feedback_data.get("wpm", "N/A"))
+            else:
+                st.error("Local feedback.json file not found.")
 
         except Exception as e:
             st.error(f"Failed to parse feedback: {e}")
