@@ -50,7 +50,7 @@ if st.button("Start Practice", key="start_practice_button"):
         # Go to Practice
         st.markdown(
             f"""
-            <a href="/practice?name={name}&role={role}" target="_self">
+            <a href="/Practice?name={name}&role={role}" target="_self">
                 <button style='padding: 0.75em 1.5em; font-size: 1.1em; background-color: #2563eb; color: white; border: none; border-radius: 8px; margin-top: 1rem;'>
                      Go to Flashcards
                 </button>

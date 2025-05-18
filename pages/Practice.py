@@ -1,10 +1,7 @@
 import streamlit as st
-from streamlit_webrtc import webrtc_streamer, AudioProcessorBase, WebRtcMode
-import av
-import asyncio
-import websockets
-import threading
 import json
+import os
+
 
 
 st.set_page_config(page_title="Flashcard Practice", layout="wide")
@@ -27,13 +24,20 @@ st.markdown(
 st.markdown("<div style='margin-top: 30px'></div>", unsafe_allow_html=True)
 
 
-# Flashcard content
-flashcards = [
-    {"question": "Tell me about yourself.", "answer": "Use a brief career story + what you're looking for now."},
-    {"question": "What is your greatest strength?", "answer": "Pick 1 strength and support with a real example."},
-    {"question": "Describe a challenge you overcame.", "answer": "Use the STAR format to explain the situation and resolution."},
-]
+# === Load flashcards from local JSON file (with full question text as keys) ===
+if os.path.exists("interview_qna.json"):
+    with open("interview_qna.json", "r") as f:
+        raw_flashcards = json.load(f)
 
+    # Convert to list of dicts
+    flashcards = [
+        {"question": q, "answer": a}
+        for q, a in raw_flashcards.items()
+    ]
+else:
+    flashcards = [{"question": "No flashcards loaded.", "answer": ""}]
+
+# === Initialize session state for card navigation ===
 if "card_index" not in st.session_state:
     st.session_state.card_index = 0
 
