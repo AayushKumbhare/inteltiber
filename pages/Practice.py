@@ -4,18 +4,27 @@ import av
 import asyncio
 import websockets
 import threading
+import json
+
 
 st.set_page_config(page_title="Flashcard Practice", layout="wide")
 
 st.title("Flashcard Practice")
 
 # Display user context
-name = st.session_state.get("name", "Anonymous")
-role = st.session_state.get("role", "Not specified")
+
 query = st.query_params
 name = query.get("name", "Anonymous")
 role = query.get("role", "Not specified")
-
+st.markdown(
+    f"""
+    <p style='font-size: 1rem; margin-top: -10px;'>
+        Practicing as <strong>{name}</strong>, for <strong>{role}</strong>
+    </p>
+    """,
+    unsafe_allow_html=True
+)
+st.markdown("<div style='margin-top: 30px'></div>", unsafe_allow_html=True)
 
 
 # Flashcard content
@@ -62,7 +71,7 @@ st.markdown(
 )
 
 # Navigation Buttons
-left_col, spacer, right_col = st.columns([1, 6, 1])
+left_col, spacer, right_col = st.columns([1, 10, 1])
 
 with left_col:
     if st.button("⬅️ Previous", key="prev_button"):
